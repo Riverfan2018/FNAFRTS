@@ -1,0 +1,31 @@
+# Compilados Java
+*.class
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# IDE - VSC
+.vscode/
+*.code-workspace
+.settings/
+.classpath
+.project
+
+# IDE - NetBeans
+nbproject/private/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log

@@ -1,0 +1,236 @@
+# ============================================================
+# FNAF_RTS - Guía de formato de mapa v3
+# ============================================================
+#
+# Cada línea es una instrucción. Los comentarios empiezan por '#'.
+# El orden de las secciones importa: primero SECTOR, luego NODE,
+# después LINK, y al final OFFICE.
+#
+# ============================================================
+# SINTAXIS
+# ============================================================
+#
+# SECTOR <id> <x> <y> "<nombre>"
+#     Declara un sector en coordenadas mundiales (x, y).
+#     El nombre visible va entre comillas dobles.
+#
+# NODE <id> <sector_id> <local_x> <local_y> <tipo>
+#     Declara un nodo dentro de un sector. Las coordenadas son
+#     relativas al sector (local_x, local_y), no al mapa global.
+#     Tipos válidos:
+#         NORMAL        - nodo común. Sirve para todo (home, respawn,
+#                         waypoints, etc.). Puede tener varios
+#                         animatrónicos encima.
+#         OFFICE        - nodo único de la oficina. Uno solo por mapa.
+#                         Solo se conecta a ENTRY_LEFT / ENTRY_RIGHT.
+#         ENTRY_LEFT    - puerta izquierda de la oficina.
+#         ENTRY_RIGHT   - puerta derecha de la oficina.
+#
+# LINK <a> <b>
+#     Conexión bidireccional entre dos nodos.
+#
+# LINK <a> > <b>
+#     Conexión direccional: solo se puede ir de <a> a <b>.
+#
+# OFFICE left <nodo>
+# OFFICE right <nodo>
+#     Define qué nodo es la puerta izquierda y cuál la derecha.
+#     Los nodos deben ser de tipo ENTRY_LEFT y ENTRY_RIGHT
+#     respectivamente.
+#
+# ============================================================
+# REGLAS Y VALIDACIONES
+# ============================================================
+#
+# 1) Todo nodo debe declarar un sector que YA exista arriba en el archivo.
+#    No puedes usar un sector antes de declararlo.
+#
+# 2) Los IDs de sectores y nodos deben ser únicos.
+#
+# 3) Todo nodo debe tener al menos un LINK. Nada de islas.
+#
+# 4) Debe existir exactamente UN nodo de tipo OFFICE.
+#    Si no hay ninguno, o hay más de uno, el mapa no carga.
+#
+# 5) El nodo OFFICE solo puede conectarse a ENTRY_LEFT o ENTRY_RIGHT.
+#    Conectar la oficina a un NORMAL da error.
+#
+# 6) OFFICE left debe apuntar a un nodo de tipo ENTRY_LEFT.
+#    OFFICE right debe apuntar a un nodo de tipo ENTRY_RIGHT.
+#
+# 7) Las coordenadas pueden ser cualquier entero (negativos incluidos).
+#    El juego escala automáticamente al tamaño del panel.
+#
+# 8) Sectores con nodos muy juntos en el archivo se verán muy juntos
+#    en pantalla. Deja 3-4 unidades de separación entre nodos contiguos.
+#
+# 9) Un mismo nodo puede ser HOME de un animatrónico y RESPAWN de otro,
+#    o HOME y RESPAWN del mismo. Se define en Main.java, no aquí.
+#    Los nodos que sean home o respawn de un animatrónico quedan
+#    reservados SOLO para ese animatrónico.
+#
+# ============================================================
+
+SECTOR entrance   0 0 "Entrance"
+SECTOR partyRoom  0 0 "Dinning Room"
+SECTOR stage      0 0 "Show Stage"
+SECTOR backstage  0 0 "Backstage"
+SECTOR kitchen    0 0 "Kitchen"
+SECTOR pantry     0 0 "Pantry"
+SECTOR outside    0 0 "Outside"
+SECTOR hallway1   0 0 "Hallway 1"
+SECTOR employee   0 0 "Employee Lounge"
+SECTOR hallway2   0 0 "Hallway 2"
+SECTOR office     0 0 "Office"
+
+# --- Entrance ---
+
+NODE E1 entrance 4 0 NORMAL
+NODE E2 entrance 4 1 NORMAL
+NODE E3 entrance 3 1 NORMAL
+NODE E4 entrance 2 1 NORMAL
+NODE E5 entrance 1 1 NORMAL
+
+# --- Big Party Room ---
+
+NODE BP1 partyRoom 0 2 NORMAL
+NODE BP2 partyRoom 1 2 NORMAL
+NODE BP3 partyRoom 2 2 NORMAL
+NODE BP4 partyRoom 0 3 NORMAL
+NODE BP5 partyRoom 2 3 NORMAL
+NODE BP6 partyRoom 0 4 NORMAL
+NODE BP7 partyRoom 1 4 NORMAL
+NODE BP8 partyRoom 2 4 NORMAL
+
+# --- Stage ---
+NODE S1 stage 0 5 NORMAL
+NODE S2 stage 1 5 NORMAL
+NODE S3 stage 2 5 NORMAL
+
+# --- Backstage ---
+NODE BS1 backstage 0 6 NORMAL
+NODE BS2 backstage 1 6 NORMAL
+NODE BS3 backstage 2 6 NORMAL
+NODE BS4 backstage 0 7 NORMAL
+NODE BS5 backstage 1 7 NORMAL
+NODE BS6 backstage 2 7 NORMAL
+
+# --- Kitchen ---
+NODE K1 kitchen 3 4 NORMAL
+NODE K2 kitchen 4 4 NORMAL
+NODE K3 kitchen 3 5 NORMAL
+NODE K4 kitchen 4 5 NORMAL
+
+# --- Pantry ---
+NODE P1 pantry 3 6 NORMAL
+NODE P2 pantry 4 6 NORMAL
+
+# --- Outside ---
+NODE O1 outside 3 7 NORMAL
+NODE O2 outside 4 7 NORMAL
+NODE O3 outside 5 7 NORMAL
+NODE O4 outside 6 7 NORMAL
+
+# --- Hallway 1 ---
+NODE H11 hallway1 3 2 NORMAL
+NODE H12 hallway1 4 2 NORMAL
+NODE H13 hallway1 5 2 NORMAL
+NODE H14 hallway1 6 2 NORMAL
+NODE H15 hallway1 7 2 NORMAL
+NODE H16 hallway1 8 2 NORMAL
+
+# --- Employee Lounge ---
+NODE EL1 employee 6 5 NORMAL
+NODE EL2 employee 7 5 NORMAL
+NODE EL3 employee 6 6 NORMAL
+NODE EL4 employee 7 6 NORMAL
+
+# --- Hallway 2 ---
+NODE H21 hallway2 5 4 NORMAL
+NODE H22 hallway2 5 5 NORMAL
+NODE H23 hallway2 5 6 NORMAL
+
+# --- Office ---
+NODE PI office 5 3 ENTRY_LEFT
+NODE O  office 6 3 OFFICE
+NODE PD office 7 3 ENTRY_RIGHT
+
+# --- Links ---
+# --- Backstage ---
+LINK BS1 BS2
+LINK BS2 BS3
+LINK BS3 BS6
+LINK BS1 BS4
+LINK BS4 BS5 
+LINK BS5 BS6
+
+# --- Stage ---
+LINK S2 BS2
+LINK S1 BP6
+LINK S2 BP7
+LINK S3 BP8
+
+# --- Big Party Room ---
+LINK BP1 BP2
+LINK BP1 BP4
+LINK BP2 BP3
+LINK BP3 BP5
+LINK BP4 BP6
+LINK BP5 BP8
+LINK BP6 BP7
+LINK BP7 BP8
+
+# --- Entrance ---
+LINK E1 E2
+LINK E2 E3
+LINK E3 E4
+LINK E4 E5
+LINK E5 BP2
+
+# --- Kitchen ---
+LINK K1 BP8
+LINK K1 K2
+LINK K2 K4
+LINK K1 K3
+LINK K3 K4
+
+# --- Pantry ---
+LINK P1 K3
+LINK P1 P2
+LINK P2 O2
+
+# --- Outside ---
+LINK O1 BS6
+LINK O1 O2
+LINK O2 O3
+LINK O3 O4
+LINK O3 H23
+
+# --- Hallway 1 ---
+LINK H11 BP3
+LINK H11 H12
+LINK H12 H13
+LINK H13 H14
+LINK H14 H15
+LINK H15 H16
+LINK H15 PD
+
+# --- Employee Lounge ---
+LINK EL1 EL2
+LINK EL1 EL3
+LINK EL2 EL4
+LINK EL3 EL4
+
+# --- Hallway 2 ---
+LINK H21 H22
+LINK H22 H23
+LINK H23 EL3
+LINK H21 PI
+
+# --- Office ---
+LINK O PI
+LINK O PD
+
+# --- Oficina ---
+OFFICE left  PI
+OFFICE right PD
