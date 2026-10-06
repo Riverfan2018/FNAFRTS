@@ -3,6 +3,9 @@ package fnafrts.view;
 import java.awt.Color;
 import java.awt.Font;
 
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+
 public final class Theme {
     private Theme() {}
 
@@ -15,6 +18,10 @@ public final class Theme {
     // ---------- Bordes de sector ----------
     public static final Color BORDER_SECTOR_ACTIVE = new Color(120, 140, 190);
     public static final Color BORDER_SECTOR_DIM    = new Color(50, 50, 70);
+
+    // ---------- Hover de sector ----------
+    public static final Color BG_SECTOR_HOVER     = new Color(28, 32, 48, 200);
+    public static final Color BORDER_SECTOR_HOVER = new Color(100, 115, 160);
 
     // ---------- Links ----------
     public static final Color LINK_ACTIVE = new Color(140, 150, 190);
@@ -68,6 +75,10 @@ public final class Theme {
     public static final Color PEEK_DARK = new Color(12, 12, 18);
     public static final Color PEEK_LIT  = new Color(40, 45, 55);
 
+    // ---------- Hover ----------
+    public static final Color BUTTON_HOVER_BG     = new Color(40, 45, 65);
+    public static final Color BUTTON_HOVER_BORDER = new Color(150, 170, 220);
+
     // ---------- Helpers ----------
 
     public static Color dim(Color c, float factor) {
@@ -80,5 +91,27 @@ public final class Theme {
 
     public static Color withAlpha(Color c, int alpha) {
         return new Color(c.getRed(), c.getGreen(), c.getBlue(), alpha);
+    }
+
+    public static void installHover(JButton b,
+                                Color baseBg, Color baseBorder,
+                                Color hoverBg, Color hoverBorder) {
+        b.setBackground(baseBg);
+        b.setBorder(BorderFactory.createLineBorder(baseBorder, 1));
+
+        b.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                if (!b.isEnabled()) return;
+                b.setBackground(hoverBg);
+                b.setBorder(BorderFactory.createLineBorder(hoverBorder, 1));
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                b.setBackground(baseBg);
+                b.setBorder(BorderFactory.createLineBorder(baseBorder, 1));
+            }
+        });
     }
 }

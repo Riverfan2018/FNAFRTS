@@ -14,7 +14,6 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.function.Consumer;
 
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -71,10 +70,12 @@ public class MainMenuFrame extends JFrame {
         JButton b = new JButton(text);
         b.setFont(new Font("SansSerif", Font.BOLD, 22));
         b.setFocusPainted(false);
-        b.setBackground(Theme.BG_DEEP);
         b.setForeground(Theme.TEXT_PRIMARY);
-        b.setBorder(BorderFactory.createLineBorder(Theme.BORDER_SECTOR_ACTIVE, 2));
         b.setPreferredSize(new Dimension(240, 60));
+
+        Theme.installHover(b, Theme.BG_DEEP, Theme.BORDER_SECTOR_ACTIVE,
+                        Theme.BUTTON_HOVER_BG, Theme.BUTTON_HOVER_BORDER);
+
         return b;
     }
 

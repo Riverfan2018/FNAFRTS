@@ -67,9 +67,9 @@ public class DoorWidget extends JPanel {
         JButton b = new JButton(text);
         b.setFont(Theme.FONT_BUTTON);
         b.setFocusPainted(false);
-        b.setBackground(Theme.BG_DEEP);
         b.setForeground(Theme.TEXT_PRIMARY);
-        b.setBorder(BorderFactory.createLineBorder(Theme.BORDER_SECTOR_DIM, 1));
+        Theme.installHover(b, Theme.BG_DEEP, Theme.BORDER_SECTOR_DIM,
+                   Theme.BUTTON_HOVER_BG, Theme.BUTTON_HOVER_BORDER);
         return b;
     }
 

@@ -55,6 +55,7 @@ public class MapPanel extends JPanel {
     private final GameState state;
     private final Map<String, Rectangle> nodeBounds = new HashMap<>();
     private int cellSize = 60;
+    private String hoveredSectorId = null;
     private long staticStartMs = 0;
     private int lastW = -1;
     private int lastH = -1;
@@ -84,6 +85,10 @@ public class MapPanel extends JPanel {
                         : Cursor.DEFAULT_CURSOR;
                 if (getCursor().getType() != cursor) {
                     setCursor(Cursor.getPredefinedCursor(cursor));
+                }
+                if (!java.util.Objects.equals(sectorId, hoveredSectorId)) {
+                    hoveredSectorId = sectorId;
+                    repaint();
                 }
             }
         });
@@ -225,14 +230,20 @@ public class MapPanel extends JPanel {
         int w = bounds.width;
         int h = bounds.height;
 
-        boolean isOffice = s.getId().equals(state.getMap().getOfficeSectorId());
-        boolean reveal   = state.isGameFinished();
-        boolean active   = reveal || s.getId().equals(state.getActiveSectorId()) || isOffice;
+        boolean isOffice  = s.getId().equals(state.getMap().getOfficeSectorId());
+        boolean reveal    = state.isGameFinished();
+        boolean isActive  = s.getId().equals(state.getActiveSectorId());
+        boolean isHovered = s.getId().equals(hoveredSectorId);
+        boolean active    = reveal || isActive || isOffice;
 
         if (isOffice) {
             g2.setColor(Theme.BG_SECTOR_OFFICE);
+        } else if (active) {
+            g2.setColor(Theme.BG_SECTOR_ACTIVE);
+        } else if (isHovered) {
+            g2.setColor(Theme.BG_SECTOR_HOVER);
         } else {
-            g2.setColor(active ? Theme.BG_SECTOR_ACTIVE : Theme.BG_SECTOR_DIM);
+            g2.setColor(Theme.BG_SECTOR_DIM);
         }
         g2.fillRoundRect(x, y, w, h, 18, 18);
 
@@ -247,6 +258,10 @@ public class MapPanel extends JPanel {
 
             g2.setColor(borderColor);
             g2.setStroke(new BasicStroke(1.2f));
+            g2.drawRoundRect(x, y, w, h, 18, 18);
+        } else if (isHovered) {
+            g2.setColor(Theme.BORDER_SECTOR_HOVER);
+            g2.setStroke(new BasicStroke(2f));
             g2.drawRoundRect(x, y, w, h, 18, 18);
         } else {
             g2.setColor(Theme.BORDER_SECTOR_DIM);
