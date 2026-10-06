@@ -23,6 +23,10 @@ public class GameState {
     private static final int FINAL_HOUR = 6;
     private static final int LOG_CAPACITY = 50;
     private static final long CAMERA_COOLDOWN_MS = 1500L;
+    private static final long INPUT_BUFFER_MS = 250L;
+
+    private String bufferedSectorId = null;
+    private long bufferedSectorExpiryMs = 0;
 
     private final MapGraph map;
     private final DoorSystem doors;
@@ -67,12 +71,33 @@ public class GameState {
             if (id == null || id.equals(activeSectorId)) return false;
             if (blockedCameraSectors.contains(id)) return false;
             long now = System.currentTimeMillis();
-            if (now - lastSectorChangeMs < CAMERA_COOLDOWN_MS) return false;
+            long remaining = CAMERA_COOLDOWN_MS - (now - lastSectorChangeMs);
 
-            activeSectorId = id;
-            lastSectorChangeMs = now;
-            return true;
+            if (remaining > 0) {
+                if (remaining <= INPUT_BUFFER_MS) {
+                    bufferedSectorId = id;
+                    bufferedSectorExpiryMs = now + INPUT_BUFFER_MS;
+                }
+                return false;
+            }
+            return applySectorChange(id, now);
         }
+    }
+
+    private boolean applySectorChange(String id, long now) {
+        for (Animatronic a : animatronics.values()) {
+            String seen = a.getLastSeenNodeId();
+            if (seen != null) {
+                Node n = map.getNode(seen);
+                if (n != null && id.equals(n.getSectorId())) {
+                    a.setLastSeenNodeId(null);
+                }
+            }
+        }
+        activeSectorId = id;
+        lastSectorChangeMs = now;
+        bufferedSectorId = null;
+        return true;
     }
 
     public boolean isCamerasOff() {
@@ -380,7 +405,22 @@ public class GameState {
 
             // Refrescar "última vez visto" para los animatrónicos visibles en el sector activo.
             updateLastSeen();
-
+            
+            // Procesar input en buffer (si quedó algo pendiente)
+            if (bufferedSectorId != null) {
+                long now = System.currentTimeMillis();
+                if (now > bufferedSectorExpiryMs) {
+                    bufferedSectorId = null;
+                } else {
+                    long remaining = CAMERA_COOLDOWN_MS - (now - lastSectorChangeMs);
+                    if (remaining <= 0
+                            && !blockedCameraSectors.contains(bufferedSectorId)
+                            && !bufferedSectorId.equals(activeSectorId)) {
+                        applySectorChange(bufferedSectorId, now);
+                    }
+                }
+            }
+            
             // Ahora sí, la atención se actualiza con todo lo acumulado
             int lightsOn = 0;
             if (doors.isLeftLightOn())  lightsOn++;

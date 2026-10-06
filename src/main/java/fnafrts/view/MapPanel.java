@@ -56,6 +56,7 @@ public class MapPanel extends JPanel {
     private final Map<String, Rectangle> nodeBounds = new HashMap<>();
     private int cellSize = 60;
     private String hoveredSectorId = null;
+    private String lastRenderedActiveSector = null;
     private long staticStartMs = 0;
     private int lastW = -1;
     private int lastH = -1;
@@ -69,9 +70,10 @@ public class MapPanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 String sectorId = sectorAt(e.getX(), e.getY());
-                if (sectorId != null && state.trySetActiveSector(sectorId)) {
-                    staticStartMs = System.currentTimeMillis();
-                    repaint();
+                if (sectorId != null) {
+                    state.trySetActiveSector(sectorId);
+                    // La estática se dispara cuando el cambio se aplica,
+                    // no cuando se clickea. Ver paintComponent.
                 }
             }
         });
@@ -162,6 +164,15 @@ public class MapPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        // Detectar cambios de sector para disparar la estática, sin importar
+        // si vinieron del click directo o del input buffer.
+        String currentActive = state.getActiveSectorId();
+        if (!java.util.Objects.equals(currentActive, lastRenderedActiveSector)) {
+            if (lastRenderedActiveSector != null) {
+                staticStartMs = System.currentTimeMillis();
+            }
+            lastRenderedActiveSector = currentActive;
+        }
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
