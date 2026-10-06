@@ -321,6 +321,21 @@ public class MapPanel extends JPanel {
                 boolean lit = fromActive || toActive;
                 Point p2 = centerOf(r2);
 
+                // Barra de estado de puerta entre ENTRY y OFFICE.
+                if (isDoorBar(n, other)) {
+                    boolean leftBar = n.getType() == NodeType.ENTRY_LEFT
+                                || other.getType() == NodeType.ENTRY_LEFT;
+                    String doorId = leftBar ? leftEntry : rightEntry;
+                    boolean open = !state.getDoors().isBlocked(doorId);
+                    Color doorColor = open
+                            ? new Color(80, 220, 100)   // verde
+                            : new Color(220, 60, 60);   // rojo
+                    g2.setColor(doorColor);
+                    g2.setStroke(new BasicStroke(8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                    g2.drawLine(p1.x, p1.y, p2.x, p2.y);
+                    continue;
+                }
+
                 boolean touchesLeft  = n.getId().equals(leftEntry)  || other.getId().equals(leftEntry);
                 boolean touchesRight = n.getId().equals(rightEntry) || other.getId().equals(rightEntry);
                 boolean entryLit = (touchesLeft && leftOn) || (touchesRight && rightOn);
@@ -348,6 +363,14 @@ public class MapPanel extends JPanel {
                 }
             }
         }
+    }
+
+    private boolean isDoorBar(Node a, Node b) {
+        boolean aEntry  = a.getType() == NodeType.ENTRY_LEFT || a.getType() == NodeType.ENTRY_RIGHT;
+        boolean bEntry  = b.getType() == NodeType.ENTRY_LEFT || b.getType() == NodeType.ENTRY_RIGHT;
+        boolean aOffice = a.getType() == NodeType.OFFICE;
+        boolean bOffice = b.getType() == NodeType.OFFICE;
+        return (aEntry && bOffice) || (bEntry && aOffice);
     }
 
     private void paintNode(Graphics2D g2, Node n, Rectangle r, boolean lit) {

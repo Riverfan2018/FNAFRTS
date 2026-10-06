@@ -58,6 +58,11 @@ public class Bonnie extends Animatronic {
     }
 
     @Override
+    public String getBlockedDoorNodeId() {
+        return state == State.BLOCKING_DOOR ? RIGHT_DOOR : null;
+    }
+
+    @Override
     public void tick(double dt, GameState state) {
         switch (this.state) {
             case GOING_TO_HALLWAY1   -> tickGoingToHallway1(dt, state);

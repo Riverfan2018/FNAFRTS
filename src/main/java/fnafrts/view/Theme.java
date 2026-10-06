@@ -54,6 +54,7 @@ public final class Theme {
     public static final Color DOOR_OPEN      = new Color(80, 180, 100);
     public static final Color DOOR_CLOSED    = new Color(200, 70, 70);
     public static final Color DOOR_OVERHEAT  = new Color(230, 140, 40);
+    public static final Color DOOR_BLOCKED = new Color(180, 90, 220);
 
     // ---------- Luces de puerta ----------
     public static final Color NODE_ENTRY_LIT   = new Color(190, 150, 50);

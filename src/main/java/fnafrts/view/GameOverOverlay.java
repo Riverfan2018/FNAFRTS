@@ -69,7 +69,7 @@ public class GameOverOverlay extends JPanel {
         // Instrucción
         g2.setColor(new Color(180, 180, 200));
         g2.setFont(new Font("SansSerif", Font.PLAIN, 18));
-        String hint = "Presioná R para reiniciar  ·  ESC para salir";
+        String hint = "Presioná R para reiniciar la noche  ·  ESC para volver al menú";
         fm = g2.getFontMetrics();
         tw = fm.stringWidth(hint);
         g2.drawString(hint, (w - tw) / 2, h / 2 + 100);

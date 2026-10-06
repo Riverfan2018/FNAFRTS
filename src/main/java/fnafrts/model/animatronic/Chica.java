@@ -75,6 +75,11 @@ public class Chica extends Animatronic {
     }
 
     @Override
+    public String getBlockedDoorNodeId() {
+        return state == State.BLOCKING_DOOR ? LEFT_DOOR : null;
+    }
+
+    @Override
     public boolean acceptPizzaOrder(GameState gameState) {
         if (state != State.IN_KITCHEN) return false;
         state = State.COOKING_PIZZA;

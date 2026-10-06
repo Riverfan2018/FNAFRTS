@@ -95,34 +95,43 @@ public class DoorWidget extends JPanel {
 
     private void paintDoorState(Graphics2D g2, int x, int y, int w, int h) {
         DoorSystem doors = state.getDoors();
+        boolean blocked = isLeft ? doors.isLeftBlocked() : doors.isRightBlocked();
         DoorState doorState = isLeft ? doors.getLeftState() : doors.getRightState();
 
         Color border, fill, label;
         String text;
-        switch (doorState) {
-            case OPEN -> {
-                border = Theme.DOOR_OPEN;
-                fill   = Theme.withAlpha(Theme.DOOR_OPEN, 35);
-                label  = Theme.DOOR_OPEN;
-                text   = "ABIERTA";
-            }
-            case CLOSED -> {
-                border = Theme.DOOR_CLOSED;
-                fill   = Theme.withAlpha(Theme.DOOR_CLOSED, 45);
-                label  = Theme.DOOR_CLOSED;
-                text   = "CERRADA";
-            }
-            case OVERHEATED -> {
-                border = Theme.DOOR_OVERHEAT;
-                fill   = Theme.withAlpha(Theme.DOOR_OVERHEAT, 60);
-                label  = Theme.DOOR_OVERHEAT;
-                text   = "SOBRECALENTADA";
-            }
-            default -> {
-                border = Theme.BORDER_SECTOR_DIM;
-                fill   = Theme.BG_PANEL;
-                label  = Theme.TEXT_MUTED;
-                text   = "?";
+
+        if (blocked) {
+            border = Theme.DOOR_BLOCKED;
+            fill   = Theme.withAlpha(Theme.DOOR_BLOCKED, 60);
+            label  = Theme.DOOR_BLOCKED;
+            text   = "BLOQUEADA";
+        } else {
+            switch (doorState) {
+                case OPEN -> {
+                    border = Theme.DOOR_OPEN;
+                    fill   = Theme.withAlpha(Theme.DOOR_OPEN, 35);
+                    label  = Theme.DOOR_OPEN;
+                    text   = "ABIERTA";
+                }
+                case CLOSED -> {
+                    border = Theme.DOOR_CLOSED;
+                    fill   = Theme.withAlpha(Theme.DOOR_CLOSED, 45);
+                    label  = Theme.DOOR_CLOSED;
+                    text   = "CERRADA";
+                }
+                case OVERHEATED -> {
+                    border = Theme.DOOR_OVERHEAT;
+                    fill   = Theme.withAlpha(Theme.DOOR_OVERHEAT, 60);
+                    label  = Theme.DOOR_OVERHEAT;
+                    text   = "SOBRECALENTADA";
+                }
+                default -> {
+                    border = Theme.BORDER_SECTOR_DIM;
+                    fill   = Theme.BG_PANEL;
+                    label  = Theme.TEXT_MUTED;
+                    text   = "?";
+                }
             }
         }
 
@@ -135,7 +144,10 @@ public class DoorWidget extends JPanel {
         int iconSize = 20;
         int ix = x + 12;
         int iy = y + (h - iconSize) / 2;
-        if (doorState == DoorState.CLOSED || doorState == DoorState.OVERHEATED) {
+        if (blocked) {
+            // Cuadrado relleno (puerta trabada)
+            g2.fillRect(ix + iconSize / 3, iy, iconSize / 3, iconSize);
+        } else if (doorState == DoorState.CLOSED || doorState == DoorState.OVERHEATED) {
             g2.fillRect(ix + iconSize / 3, iy, iconSize / 3, iconSize);
         } else {
             g2.setStroke(new BasicStroke(1.5f));

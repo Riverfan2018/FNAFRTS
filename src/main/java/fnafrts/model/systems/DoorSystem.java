@@ -14,6 +14,8 @@ public class DoorSystem {
 
     private DoorState leftState  = DoorState.OPEN;
     private DoorState rightState = DoorState.OPEN;
+    private boolean leftBlocked  = false;
+    private boolean rightBlocked = false;
     private boolean leftLightOn  = false;
     private boolean rightLightOn = false;
 
@@ -28,6 +30,12 @@ public class DoorSystem {
     public String getLeftEntryNodeId()  { return leftEntryNodeId; }
     public String getRightEntryNodeId() { return rightEntryNodeId; }
 
+    public boolean isLeftBlocked()  { return leftBlocked; }
+    public boolean isRightBlocked() { return rightBlocked; }
+
+    public void setLeftBlocked(boolean b)  { this.leftBlocked = b; }
+    public void setRightBlocked(boolean b) { this.rightBlocked = b; }
+
     public DoorState getLeftState()  { return leftState; }
     public DoorState getRightState() { return rightState; }
     public boolean isLeftLightOn()   { return leftLightOn; }
@@ -37,12 +45,12 @@ public class DoorSystem {
     public boolean isOverheated() { return overheated; }
 
     public void toggleLeft() {
-        if (overheated) return;
+        if (overheated || leftBlocked) return;
         leftState = (leftState == DoorState.OPEN) ? DoorState.CLOSED : DoorState.OPEN;
     }
 
     public void toggleRight() {
-        if (overheated) return;
+        if (overheated || rightBlocked) return;
         rightState = (rightState == DoorState.OPEN) ? DoorState.CLOSED : DoorState.OPEN;
     }
 

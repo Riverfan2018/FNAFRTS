@@ -33,6 +33,9 @@ public class Animatronic {
     private double blockedTime = 0.0;
     private String lastSeenNodeId = null;
 
+    /** Devuelve el id del nodo ENTRY que este animatrónico está bloqueando, o null. */
+    public String getBlockedDoorNodeId() { return null; }
+
     public Animatronic(String id, String displayName, String symbol, Color color,
                        String homeNodeId, String respawnNodeId,
                        Random rng) {

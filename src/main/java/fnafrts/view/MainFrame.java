@@ -26,9 +26,11 @@ public class MainFrame extends JFrame {
     private final HUDPanel hudPanel;
     private final OfficePanel officePanel;
     private final GameOverOverlay overlay;
-    private final Consumer<Boolean> onExit;
+    private final Consumer<ExitReason> onExit;
 
-    public MainFrame(GameState state, Consumer<Boolean> onExit) {
+    public enum ExitReason { RESTART, MENU, QUIT }
+
+    public MainFrame(GameState state, Consumer<ExitReason> onExit) {
         super("FNAF_RTS");
         this.state = state;
         this.onExit = onExit;
@@ -41,7 +43,7 @@ public class MainFrame extends JFrame {
             @Override
             public void windowClosing(WindowEvent e) {
                 dispose();
-                MainFrame.this.onExit.accept(false);
+                MainFrame.this.onExit.accept(ExitReason.QUIT);
             }
         });
 
@@ -116,12 +118,12 @@ public class MainFrame extends JFrame {
         bind(im, am, KeyEvent.VK_R, "restart", () -> {
             if (!state.isGameFinished()) return;
             dispose();
-            onExit.accept(true);
+            onExit.accept(ExitReason.RESTART);
         });
-        bind(im, am, KeyEvent.VK_ESCAPE, "quit", () -> {
+        bind(im, am, KeyEvent.VK_ESCAPE, "backToMenu", () -> {
             if (!state.isGameFinished()) return;
             dispose();
-            onExit.accept(true);   // volver al menú
+            onExit.accept(ExitReason.MENU);
         });
     }
 
@@ -135,7 +137,7 @@ public class MainFrame extends JFrame {
         });
     }
 
-    public static void launch(GameState state, Consumer<Boolean> onExit) {
+    public static void launch(GameState state, Consumer<ExitReason> onExit) {
         SwingUtilities.invokeLater(() -> new MainFrame(state, onExit).setVisible(true));
     }
 }

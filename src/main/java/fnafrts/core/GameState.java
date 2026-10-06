@@ -403,6 +403,16 @@ public class GameState {
                 if (gameOver) return;
             }
 
+            // Recalcular puertas bloqueadas por animatrónicos.
+            doors.setLeftBlocked(false);
+            doors.setRightBlocked(false);
+            for (Animatronic a : animatronics.values()) {
+                String blocked = a.getBlockedDoorNodeId();
+                if (blocked == null) continue;
+                if (blocked.equals(doors.getLeftEntryNodeId()))  doors.setLeftBlocked(true);
+                if (blocked.equals(doors.getRightEntryNodeId())) doors.setRightBlocked(true);
+            }
+
             // Refrescar "última vez visto" para los animatrónicos visibles en el sector activo.
             updateLastSeen();
             
@@ -420,7 +430,7 @@ public class GameState {
                     }
                 }
             }
-            
+
             // Ahora sí, la atención se actualiza con todo lo acumulado
             int lightsOn = 0;
             if (doors.isLeftLightOn())  lightsOn++;

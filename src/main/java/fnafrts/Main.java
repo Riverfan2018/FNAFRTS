@@ -25,11 +25,19 @@ public class Main {
             MainMenuFrame.Action action = showMenu();
             if (action == MainMenuFrame.Action.QUIT) return;
 
-            try {
-                boolean returnToMenu = runGame();
-                if (!returnToMenu) return;   // false = salir del programa
-            } catch (Exception e) {
-                e.printStackTrace();
+            boolean backToMenu = false;
+            while (!backToMenu) {
+                try {
+                    MainFrame.ExitReason reason = runGame();
+                    switch (reason) {
+                        case RESTART -> { /* vuelve a jugar sin pasar por el menú */ }
+                        case MENU -> backToMenu = true;
+                        case QUIT -> { return; }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    backToMenu = true;
+                }
             }
         }
     }
@@ -44,7 +52,7 @@ public class Main {
         }
     }
 
-    private static boolean runGame() throws Exception {
+    private static MainFrame.ExitReason runGame() throws Exception {
         MapGraph map = MapLoader.loadFromResource("/maps/prototype.txt");
 
         Random rng = new Random();
@@ -68,12 +76,12 @@ public class Main {
         GameLoop loop = new GameLoop(state, 1.0);
         loop.start();
 
-        CompletableFuture<Boolean> result = new CompletableFuture<>();
+        CompletableFuture<MainFrame.ExitReason> result = new CompletableFuture<>();
         SwingUtilities.invokeLater(() -> MainFrame.launch(state, result::complete));
 
-        boolean returnToMenu = result.get();
+        MainFrame.ExitReason reason = result.get();
         loop.stop();
-        return returnToMenu;
+        return reason;
     }
 
 }
