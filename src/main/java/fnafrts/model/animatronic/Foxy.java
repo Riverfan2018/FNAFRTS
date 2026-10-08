@@ -9,9 +9,11 @@ import fnafrts.model.graph.Node;
 
 public class Foxy extends Animatronic {
 
-    private static final double TIMER_TARGET    = 9.3;
-    private static final double TIMER_UP_RATE   = 1.0;
-    private static final double TIMER_DOWN_RATE = 0.7;
+    private static final double TIMER_DOWN_RATE = 1.5;
+    private static final double UP_RATE_AT_1  = 0.9;
+    private static final double UP_RATE_AT_20 = 2.25;
+    private static final double TARGET_AT_1  = 36.0;
+    private static final double TARGET_AT_20 = 20.0;
 
     private static final double RUSH_NODE_TIME = 0.5;
     private static final double RUSH_SKIP_TIME = 0.8;
@@ -52,10 +54,10 @@ public class Foxy extends Animatronic {
             timer -= TIMER_DOWN_RATE * dt;
             if (timer < 0) timer = 0;
         } else {
-            timer += TIMER_UP_RATE * dt;
+            timer += aiUpRate() * dt;
         }
 
-        if (timer < TIMER_TARGET) return;
+        if (timer < aiTimerTarget()) return;
         timer = 0;
 
         if (entranceIndex >= ENTRANCE_PATH.length - 1) {
@@ -133,5 +135,19 @@ public class Foxy extends Animatronic {
         if (n == null) return false;
         String sector = n.getSectorId();
         return sector != null && sector.equals(gameState.getActiveSectorId());
+    }
+
+    private double aiUpRate() {
+        int lvl = getAiLevel();
+        if (lvl <= 0) return 0.0;
+        if (lvl >= 20) return UP_RATE_AT_20;
+        return UP_RATE_AT_1 + (lvl - 1) * (UP_RATE_AT_20 - UP_RATE_AT_1) / 19.0;
+    }
+
+    private double aiTimerTarget() {
+        int lvl = getAiLevel();
+        if (lvl <= 0) return TARGET_AT_1;
+        if (lvl >= 20) return TARGET_AT_20;
+        return TARGET_AT_1 + (lvl - 1) * (TARGET_AT_20 - TARGET_AT_1) / 19.0;
     }
 }

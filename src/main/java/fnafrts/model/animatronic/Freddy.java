@@ -9,8 +9,7 @@ import fnafrts.model.graph.Node;
 
 public class Freddy extends Animatronic {
 
-    private static final double MOVE_MIN = 8.0;
-    private static final double MOVE_MAX = 11.0;
+    private static final double MOVE_BASE = 9.5;
 
     private static final double AT_DOOR_NOISY_TIME = 8.0;
     private static final double AT_DOOR_SILENT_MIN = 1.0;
@@ -45,7 +44,7 @@ public class Freddy extends Animatronic {
     public Freddy(String id, String displayName, String symbol, Color color,
                   String homeNodeId, String respawnNodeId, Random rng) {
         super(id, displayName, symbol, color, homeNodeId, respawnNodeId, rng);
-        this.moveInterval = MOVE_MIN + rng.nextDouble() * (MOVE_MAX - MOVE_MIN);
+        this.moveInterval = rollInterval(MOVE_BASE);
         this.targetDoor = rng.nextBoolean() ? LEFT_DOOR : RIGHT_DOOR;
     }
 
@@ -86,12 +85,16 @@ public class Freddy extends Animatronic {
         if (timeSinceAttempt < moveInterval) return;
         timeSinceAttempt = 0;
 
+        if (!passesAiRoll()) {
+            moveInterval = rollInterval(MOVE_BASE);
+            return;
+        }
+
         List<String> path = state.getMap().shortestPath(getCurrentNodeId(), targetDoor);
         if (path.size() < 2) return;
         String next = path.get(1);
 
         if (!state.canEnter(getId(), next)) {
-            // Bloqueado
             if (nodesMoved < ROUTE_SWITCH_THRESHOLD) {
                 targetDoor = targetDoor.equals(LEFT_DOOR) ? RIGHT_DOOR : LEFT_DOOR;
                 nodesMoved = 0;
@@ -100,9 +103,8 @@ public class Freddy extends Animatronic {
                         + (targetDoor.equals(LEFT_DOOR) ? "la puerta izquierda" : "la puerta derecha") + ".");
                 return;
             }
-            // Ya muy avanzado: retroceder
             if (moveOrRetreat(next, state)) {
-                moveInterval = MOVE_MIN + rng.nextDouble() * (MOVE_MAX - MOVE_MIN);
+                moveInterval = rollInterval(MOVE_BASE);
             } else {
                 timeSinceAttempt = Math.max(0, moveInterval - 1.0);
             }
@@ -111,7 +113,7 @@ public class Freddy extends Animatronic {
 
         state.moveAnimatronic(this, next);
         nodesMoved++;
-        moveInterval = MOVE_MIN + rng.nextDouble() * (MOVE_MAX - MOVE_MIN);
+        moveInterval = rollInterval(MOVE_BASE);
     }
 
     private void tickAtDoor(double dt, GameState state) {
@@ -130,11 +132,16 @@ public class Freddy extends Animatronic {
         }
 
         if (doorOpen) {
-            doorOpenAccum += dt;
-            if (doorOpenAccum >= AT_DOOR_KILL_THRESHOLD) {
-                // ... igual que antes
-            }
+        doorOpenAccum += dt;
+        if (doorOpenAccum >= AT_DOOR_KILL_THRESHOLD) {
+            String officeId = state.getMap().getOfficeNodeId();
+            if (officeId != null) state.moveAnimatronic(this, officeId);
+            state.triggerGameOver(getDisplayName() + " ha entrado por la puerta "
+                    + (targetDoor.equals(LEFT_DOOR) ? "izquierda" : "derecha"));
+            this.state = State.DONE;
+            return;
         }
+    }
 
         if (noisyPhase) {
             state.getAttention().contribute(AT_DOOR_ATTENTION_RATE);
@@ -168,6 +175,6 @@ public class Freddy extends Animatronic {
         this.blinkTimer = 0.0;
         this.timeSinceAttempt = 0;
         this.nodesMoved = 0;
-        this.moveInterval = MOVE_MIN + rng.nextDouble() * (MOVE_MAX - MOVE_MIN);
+        this.moveInterval = rollInterval(MOVE_BASE);
     }
 }

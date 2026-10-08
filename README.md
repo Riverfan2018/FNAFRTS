@@ -90,16 +90,16 @@ entrada, no sala de empleados, no ENTRY).
 ## 3. Interfaz 
 Layout del MainFrame 
 text 
-    ┌─────────────────────────────────────────┐ 
-    │ HUDPanel: reloj │ atención │ calor      │ 
-    ├─────────────────────────────────────────┤ 
-    │                                         │ 
-    │              MapPanel                   │ 
-    │       (grafo + animatrónicos)           │ 
-    │                                         │ 
-    ├─────────────────────────────────────────┤ 
-    │ OfficePanel: widgets de puertas + botones│ 
-    └─────────────────────────────────────────┘ 
+    ┌─────────────────────────────────────────┐                                                                             
+    │ HUDPanel: reloj │ atención │ calor      │                                                                             
+    ├─────────────────────────────────────────┤                                                                             
+    │                                         │                                                                             
+    │              MapPanel                   │                                                                             
+    │       (grafo + animatrónicos)           │                                                                             
+    │                                         │                                                                             
+    ├─────────────────────────────────────────┤                                                                             
+    │ OfficePanel: widgets de puertas + botones│                                                                             
+    └─────────────────────────────────────────┘                                                                             
 #### MapPanel 
 - Rejilla adaptativa: calcula bounding box de todos los nodos y escala. 
 - Nodos cuadrados con sombra, borde y highlight. 
@@ -130,16 +130,16 @@ text
 - Hint: "Presioná R para reiniciar la noche · ESC para volver al menú". 
  
 ## 4. Atajos de teclado 
-Tecla  Acción 
-Q  Toggle puerta izquierda 
-E  Toggle puerta derecha 
-A  Toggle luz izquierda 
-D  Toggle luz derecha 
-W  Ordenar pizza (en cocina) 
-S  Shockear a Endo (en sala de empleados) 
-C  Apagar cámaras 
-R  Reiniciar noche (solo en game over) 
-ESC  Volver al menú (solo en game over) 
+Tecla  Acción:
+- Q  Toggle puerta izquierda.
+- E  Toggle puerta derecha.
+- A  Toggle luz izquierda.
+- D  Toggle luz derecha.
+- W  Ordenar pizza (en cocina).
+- S  Shockear a Endo (en sala de empleados).
+- C  Apagar cámaras.
+- R  Reiniciar noche (solo en game over).
+- ESC  Volver al menú (solo en game over).
  
 ## 5. Decisiones técnicas clave 
 Concurrencia 

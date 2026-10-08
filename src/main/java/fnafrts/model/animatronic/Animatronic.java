@@ -113,7 +113,7 @@ public class Animatronic {
         if (timeSinceAttempt < moveInterval) return;
         timeSinceAttempt = 0.0;
 
-        if (rng.nextInt(20) >= aiLevel) return;
+        if (!passesAiRoll()) return;
 
         List<Node> neighbors = state.getMap().getNeighbors(currentNodeId);
         List<Node> available = new ArrayList<>();
@@ -152,5 +152,49 @@ public class Animatronic {
     private void respawn(GameState state) {
         state.log(displayName + " bloqueado, vuelve a " + respawnNodeId);
         state.moveAnimatronic(this, respawnNodeId);
+    }
+
+    // ---------- AI Level ----------
+
+    protected static final double AI_FACTOR_AT_1  = 1.5;
+    protected static final double AI_FACTOR_AT_20 = 0.5;
+    protected static final double JITTER_RATIO    = 0.4;
+
+    /**
+     * Factor multiplicativo del intervalo según AI level.
+     * IA 1 → 1.5 (intervalos más largos = más lento)
+     * IA 20 → 0.5 (intervalos más cortos = más rápido)
+     */
+    protected double aiFactor() {
+        int lvl = getAiLevel();
+        if (lvl <= 0) return AI_FACTOR_AT_1;
+        return AI_FACTOR_AT_1 - (lvl - 1) * (AI_FACTOR_AT_1 - AI_FACTOR_AT_20) / 19.0;
+    }
+
+    /**
+     * Probabilidad de moverse cuando el timer expira.
+     * Curva estándar: IA 1 → 57.5%, IA 20 → 94.5%.
+     * IA 0 → 0% (nunca se mueve).
+     */
+    protected double aiProbability() {
+        int lvl = getAiLevel();
+        if (lvl <= 0) return 0.0;
+        double p = 0.575 + (lvl - 1) * 0.0195;
+        return Math.max(0.0, Math.min(1.0, p));
+    }
+
+    /** Tira el dado contra aiProbability. */
+    protected boolean passesAiRoll() {
+        return rng.nextDouble() < aiProbability();
+    }
+
+    /**
+     * Intervalo con jitter y factorIA aplicados.
+     * base = valor central del intervalo en segundos.
+     * Rango resultante: base * [1 - J/2, 1 + J/2] * factorIA
+     */
+    protected double rollInterval(double base) {
+        double jitter = 1.0 - JITTER_RATIO / 2.0 + rng.nextDouble() * JITTER_RATIO;
+        return base * jitter * aiFactor();
     }
 }

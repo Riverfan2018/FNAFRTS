@@ -12,8 +12,7 @@ import fnafrts.model.graph.NodeType;
 
 public class GoldenFreddy extends Animatronic {
 
-    private static final double TELEPORT_MIN = 14.0;
-    private static final double TELEPORT_MAX = 21.0;
+    private static final double TELEPORT_BASE = 17.5;
     private static final double OFFICE_CHANCE_INCREMENT = 0.03;
 
     private static final double WATCH_KILL_TIME = 6.0;
@@ -42,7 +41,7 @@ public class GoldenFreddy extends Animatronic {
     public GoldenFreddy(String id, String displayName, String symbol, Color color,
                         String homeNodeId, Random rng) {
         super(id, displayName, symbol, color, homeNodeId, homeNodeId, rng);
-        this.teleportTimer = rollTeleportInterval();
+        this.teleportTimer = rollInterval(TELEPORT_BASE);
     }
 
     public State getState() { return state; }
@@ -65,9 +64,11 @@ public class GoldenFreddy extends Animatronic {
                 gameState.triggerGameOver(getDisplayName() + " te atrapó mientras lo mirabas");
                 return;
             }
-        } else {
-            watchTimer = 0;
+            // El timer de teletransporte no avanza mientras lo estás mirando.
+            return;
         }
+
+        watchTimer = 0;
 
         teleportTimer -= dt;
         if (teleportTimer > 0) return;
@@ -80,7 +81,7 @@ public class GoldenFreddy extends Animatronic {
 
         teleportRandom(gameState);
         this.officeChance += OFFICE_CHANCE_INCREMENT;
-        this.teleportTimer = rollTeleportInterval();
+        this.teleportTimer = rollInterval(TELEPORT_BASE);
     }
 
     // ---------- IN_OFFICE ----------
@@ -111,7 +112,7 @@ public class GoldenFreddy extends Animatronic {
         cooldownTimer += dt;
         if (cooldownTimer >= COOLDOWN_TIME) {
             this.state = State.WANDERING;
-            this.teleportTimer = rollTeleportInterval();
+            this.teleportTimer = rollInterval(TELEPORT_BASE);
             this.cooldownTimer = 0;
         }
     }
@@ -150,10 +151,6 @@ public class GoldenFreddy extends Animatronic {
         this.officeTimer = 0;
         this.camerasOffAccum = 0;
         this.watchTimer = 0;
-    }
-
-    private double rollTeleportInterval() {
-        return TELEPORT_MIN + rng.nextDouble() * (TELEPORT_MAX - TELEPORT_MIN);
     }
 
     private boolean isObserved(GameState gameState) {

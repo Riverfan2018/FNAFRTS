@@ -9,8 +9,7 @@ import fnafrts.model.graph.Node;
 
 public class Bonnie extends Animatronic {
 
-    private static final double MOVE_MIN = 4.5;
-    private static final double MOVE_MAX = 7.0;
+    private static final double MOVE_BASE = 5.75;
     private static final double OBSERVED_MULT = 1.25;
     private static final double SKIP_INTERVAL_MULT = 1.5;
 
@@ -47,7 +46,7 @@ public class Bonnie extends Animatronic {
     public Bonnie(String id, String displayName, String symbol, Color color,
               String homeNodeId, String respawnNodeId, java.util.Random rng) {
         super(id, displayName, symbol, color, homeNodeId, respawnNodeId, rng);
-        this.moveInterval = MOVE_MIN + rng.nextDouble() * (MOVE_MAX - MOVE_MIN);
+        this.moveInterval = rollInterval(MOVE_BASE);
     }
 
     public State getState() { return state; }
@@ -155,12 +154,17 @@ public class Bonnie extends Animatronic {
         timeSinceAttempt += dt;
         if (timeSinceAttempt < moveInterval) return;
 
+        if (!passesAiRoll()) {
+            timeSinceAttempt = 0;
+            moveInterval = rollInterval(state);
+            return;
+        }
+
         boolean moved = tryMoveWithSkip(targetId, state);
         if (moved) {
             timeSinceAttempt = 0;
         } else {
-            // No pudo: reintenta pronto
-            timeSinceAttempt = Math.max(0, moveInterval - 1.0);
+            timeSinceAttempt = Math.max(0, timeSinceAttempt - 1.0);
         }
     }
 
@@ -203,9 +207,8 @@ public class Bonnie extends Animatronic {
     // ---------- Helpers ----------
 
     private double rollInterval(GameState state) {
-        double base = MOVE_MIN + state.getRandom().nextDouble() * (MOVE_MAX - MOVE_MIN);
         double obsMult = isObserved(state) ? OBSERVED_MULT : 1.0;
-        return base * obsMult;
+        return rollInterval(MOVE_BASE) * obsMult;
     }
 
     private boolean isObserved(GameState state) {
@@ -224,6 +227,6 @@ public class Bonnie extends Animatronic {
         this.doorWaitTimer = 0;
         this.killTimer = 0;
         this.timeSinceAttempt = 0;
-        this.moveInterval = MOVE_MIN + rng.nextDouble() * (MOVE_MAX - MOVE_MIN);
+        this.moveInterval = rollInterval(MOVE_BASE);
     }
 }

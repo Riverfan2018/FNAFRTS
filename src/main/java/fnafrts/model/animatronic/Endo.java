@@ -8,14 +8,12 @@ import fnafrts.core.GameState;
 
 public class Endo extends Animatronic {
 
-    private static final double EL_MOVE_MIN = 26.0;
-    private static final double EL_MOVE_MAX = 38.0;
+    private static final double EL_MOVE_BASE = 32.0;
 
     private static final double SHOCK_WINDOW_MIN = 10.0;
     private static final double SHOCK_WINDOW_MAX = 14.0;
 
-    private static final double HURRIED_MOVE_MIN = 4.0;
-    private static final double HURRIED_MOVE_MAX = 6.0;
+    private static final double HURRIED_MOVE_BASE = 5.0;
     private static final double HURRIED_DOOR_KILL_TIME = 2.0;
 
     private static final double SILENT_DOOR_KILL_TIME = 5.0;
@@ -51,10 +49,18 @@ public class Endo extends Animatronic {
     public Endo(String id, String displayName, String symbol, Color color,
                 String homeNodeId, Random rng) {
         super(id, displayName, symbol, color, homeNodeId, homeNodeId, rng);
-        this.moveTimer = rollElMove();
+        this.moveTimer = rollInterval(EL_MOVE_BASE);
     }
 
     public State getState() { return state; }
+
+    @Override
+    protected double aiProbability() {
+        int lvl = getAiLevel();
+        if (lvl <= 0) return 0.0;
+        double p = 0.72 + (lvl - 1) * 0.0137;
+        return Math.max(0.0, Math.min(1.0, p));
+    }
 
     @Override
     public boolean canBeShocked() {
@@ -66,7 +72,7 @@ public class Endo extends Animatronic {
         if (this.state != State.SHOCK_WINDOW) return false;
         this.state = State.WANDERING;
         this.stateTimer = 0;
-        this.moveTimer = rollElMove();
+        this.moveTimer = rollInterval(EL_MOVE_BASE);
         state.moveAnimatronic(this, EL2);
         return true;
     }
@@ -76,12 +82,12 @@ public class Endo extends Animatronic {
     @Override
     public void tick(double dt, GameState gameState) {
         switch (this.state) {
-            case WANDERING      -> tickWandering(dt, gameState);
-            case SHOCK_WINDOW   -> tickShockWindow(dt, gameState);
-            case HURRIED        -> tickHurried(dt, gameState);
+            case WANDERING       -> tickWandering(dt, gameState);
+            case SHOCK_WINDOW    -> tickShockWindow(dt, gameState);
+            case HURRIED         -> tickHurried(dt, gameState);
             case HURRIED_AT_DOOR -> tickHurriedAtDoor(dt, gameState);
-            case SILENT_AT_DOOR -> tickSilentAtDoor(dt, gameState);
-            case OFF            -> tickOff(dt, gameState);
+            case SILENT_AT_DOOR  -> tickSilentAtDoor(dt, gameState);
+            case OFF             -> tickOff(dt, gameState);
             case DONE -> { }
         }
     }
@@ -91,7 +97,9 @@ public class Endo extends Animatronic {
     private void tickWandering(double dt, GameState gameState) {
         moveTimer -= dt;
         if (moveTimer > 0) return;
-        moveTimer = rollElMove();
+        moveTimer = rollInterval(EL_MOVE_BASE);
+
+        if (!passesAiRoll()) return;
 
         String current = getCurrentNodeId();
         String next;
@@ -147,7 +155,7 @@ public class Endo extends Animatronic {
 
         moveTimer -= dt;
         if (moveTimer > 0) return;
-        moveTimer = rollHurriedMove();
+        moveTimer = rollInterval(HURRIED_MOVE_BASE);
 
         List<String> path = gameState.getMap().shortestPath(getCurrentNodeId(), PI);
         if (path.size() < 2) return;
@@ -158,7 +166,6 @@ public class Endo extends Animatronic {
         if (gameState.isNodeOccupiedByOther(target, getId())) {
             target = path.get(1);
             if (gameState.isNodeOccupiedByOther(target, getId())) {
-                // Retroceder como último recurso
                 String prev = getPreviousNodeId();
                 if (prev != null && gameState.canEnter(getId(), prev)) {
                     gameState.moveAnimatronic(this, prev);
@@ -211,7 +218,7 @@ public class Endo extends Animatronic {
             gameState.log(getDisplayName() + " bloqueado, vuelve a EL2.");
             gameState.moveAnimatronic(this, EL2);
             this.state = State.WANDERING;
-            this.moveTimer = rollElMove();
+            this.moveTimer = rollInterval(EL_MOVE_BASE);
             this.stateTimer = 0;
             return;
         }
@@ -240,19 +247,6 @@ public class Endo extends Animatronic {
 
     // ---------- Helpers ----------
 
-    private double rollElMove() {
-        return EL_MOVE_MIN + rng.nextDouble() * (EL_MOVE_MAX - EL_MOVE_MIN);
-    }
-
-    private double rollHurriedMove() {
-        return HURRIED_MOVE_MIN + rng.nextDouble() * (HURRIED_MOVE_MAX - HURRIED_MOVE_MIN);
-    }
-
-    /**
-     * Si la luz izquierda está encendida y la puerta izquierda está abierta
-     * mientras Endo está en PI, mata en LIGHT_KILL_TIME segundos.
-     * Devuelve true si ya mató (para cortar el tick).
-     */
     private boolean checkLightKill(double dt, GameState gameState) {
         boolean lightOn = gameState.getDoors().isLeftLightOn();
         boolean doorOpen = !gameState.getDoors().isBlocked(PI);

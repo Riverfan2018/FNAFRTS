@@ -9,8 +9,7 @@ import fnafrts.model.graph.Node;
 
 public class Chica extends Animatronic {
 
-    private static final double MOVE_MIN = 6.0;
-    private static final double MOVE_MAX = 9.0;
+    private static final double MOVE_BASE = 7.5;
     private static final double OBSERVED_MULT = 1.15;
     private static final double PIZZA_SPEED_MULT = 0.8;
 
@@ -59,7 +58,7 @@ public class Chica extends Animatronic {
     public Chica(String id, String displayName, String symbol, Color color,
                  String homeNodeId, String respawnNodeId, Random rng) {
         super(id, displayName, symbol, color, homeNodeId, respawnNodeId, rng);
-        this.moveInterval = MOVE_MIN + rng.nextDouble() * (MOVE_MAX - MOVE_MIN);
+        this.moveInterval = rollInterval(MOVE_BASE);
     }
 
     public State getState() { return state; }
@@ -207,6 +206,13 @@ public class Chica extends Animatronic {
         timeSinceAttempt += dt;
         if (timeSinceAttempt < moveInterval) return;
 
+        if (!passesAiRoll()) {
+            // Falló la tirada: reintenta en el próximo intervalo
+            timeSinceAttempt = 0;
+            moveInterval = rollInterval(state);
+            return;
+        }
+
         if (moveToward(targetId, state)) {
             timeSinceAttempt = 0;
             moveInterval = rollInterval(state);
@@ -222,9 +228,8 @@ public class Chica extends Animatronic {
     }
 
     private double rollInterval(GameState state) {
-        double base = MOVE_MIN + state.getRandom().nextDouble() * (MOVE_MAX - MOVE_MIN);
         double obsMult = isObserved(state) ? OBSERVED_MULT : 1.0;
-        return base * obsMult * speedMultiplier;
+        return rollInterval(MOVE_BASE) * obsMult * speedMultiplier;
     }
 
     private boolean isObserved(GameState state) {
@@ -262,6 +267,6 @@ public class Chica extends Animatronic {
         this.prevDoorOpen = false;
         this.speedMultiplier = 1.0;
         this.timeSinceAttempt = 0;
-        this.moveInterval = MOVE_MIN + rng.nextDouble() * (MOVE_MAX - MOVE_MIN);
+        this.moveInterval = rollInterval(MOVE_BASE);
     }
 }
