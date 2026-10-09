@@ -71,6 +71,7 @@ public class Animatronic {
     public void setBlockedThreshold(double seconds) { this.blockedThreshold = seconds; }
 
     public int getAiLevel() { return aiLevel; }
+    public boolean isActive() { return aiLevel > 0; }
     public double getMoveInterval() { return moveInterval; }
 
     public String getLastSeenNodeId() { return lastSeenNodeId; }

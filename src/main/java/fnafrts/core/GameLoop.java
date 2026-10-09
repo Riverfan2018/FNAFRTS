@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 public class GameLoop {
 
-    private static final long TICK_MS = 100L;
+    private static final long TICK_MS = 33L;
     private static final double TICK_S = TICK_MS / 1000.0;
 
     private final GameState state;

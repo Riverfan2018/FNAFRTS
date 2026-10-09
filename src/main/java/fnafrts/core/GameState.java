@@ -198,12 +198,11 @@ public class GameState {
 
     private void updateLastSeen() {
         for (Animatronic a : animatronics.values()) {
+            if (!a.isActive()) continue;
             if (isAnimatronicVisibleToPlayer(a)) {
                 a.setLastSeenNodeId(a.getCurrentNodeId());
                 continue;
             }
-            // No visible ahora. Si su marca apunta a una zona que estás viendo,
-            // significa que re-escaneaste y no está: borramos.
             String seen = a.getLastSeenNodeId();
             if (seen != null && isNodeVisibleToPlayer(seen)) {
                 a.setLastSeenNodeId(null);
@@ -249,6 +248,7 @@ public class GameState {
         synchronized (lock) {
             List<AnimatronicView> views = new ArrayList<>();
             for (Animatronic a : animatronics.values()) {
+                if (!a.isActive()) continue;
                 views.add(new AnimatronicView(
                     a.getId(), a.getDisplayName(),
                     a.getSymbol(), a.getColor(),
@@ -309,9 +309,14 @@ public class GameState {
                 throw new IllegalArgumentException("Animatrónico duplicado: " + a.getId());
             }
             animatronics.put(a.getId(), a);
-            nodeOccupancy.computeIfAbsent(a.getCurrentNodeId(), k -> new HashSet<>())
-                         .add(a.getId());
-            log(a.getDisplayName() + " inicializado en " + a.getCurrentNodeId());
+
+            if (a.isActive()) {
+                nodeOccupancy.computeIfAbsent(a.getCurrentNodeId(), k -> new HashSet<>())
+                            .add(a.getId());
+                log(a.getDisplayName() + " inicializado en " + a.getCurrentNodeId());
+            } else {
+                log(a.getDisplayName() + " desactivado (AI 0).");
+            }
         }
     }
 
@@ -326,14 +331,15 @@ public class GameState {
         synchronized (lock) {
             if (map.getNode(nodeId) == null) return false;
 
-            // Exclusividad de home/respawn
+            // Exclusividad de home/respawn (solo animatrónicos activos)
             for (Animatronic a : animatronics.values()) {
+                if (!a.isActive()) continue;
                 if (nodeId.equals(a.getHomeNodeId()) || nodeId.equals(a.getRespawnNodeId())) {
                     if (!a.getId().equals(animatronicId)) return false;
                 }
             }
 
-            // Ocupación real: no puedo pisar un nodo donde ya hay otro
+            // Ocupación real
             Set<String> occ = nodeOccupancy.get(nodeId);
             if (occ != null && !occ.isEmpty() && !occ.contains(animatronicId)) {
                 return false;
@@ -399,6 +405,7 @@ public class GameState {
 
             // Los animatrónicos tickean y contribuyen a la atención
             for (Animatronic a : animatronics.values()) {
+                if (!a.isActive()) continue;
                 a.tick(dt, this);
                 if (gameOver) return;
             }
@@ -407,6 +414,7 @@ public class GameState {
             doors.setLeftBlocked(false);
             doors.setRightBlocked(false);
             for (Animatronic a : animatronics.values()) {
+                if (!a.isActive()) continue;
                 String blocked = a.getBlockedDoorNodeId();
                 if (blocked == null) continue;
                 if (blocked.equals(doors.getLeftEntryNodeId()))  doors.setLeftBlocked(true);

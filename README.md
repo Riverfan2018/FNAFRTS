@@ -1,3 +1,4 @@
+# FNAF RTS v0.1.2
 ## 1. Sistemas de juego 
 ### 1.1 Puertas y calor (DoorSystem) 
 Recurso compartido que sube con puertas cerradas y baja con puertas abiertas. 
@@ -90,6 +91,7 @@ entrada, no sala de empleados, no ENTRY).
 ## 3. Interfaz 
 Layout del MainFrame 
 text 
+
     ┌─────────────────────────────────────────┐                                                                             
     │ HUDPanel: reloj │ atención │ calor      │                                                                             
     ├─────────────────────────────────────────┤                                                                             
@@ -143,29 +145,41 @@ Tecla  Acción:
  
 ## 5. Decisiones técnicas clave 
 Concurrencia 
+
 Un solo GameLoop con ScheduledExecutorService a 10 Hz (100 ms/tick). 
 Tick único en GameState: tickea puertas, animatrónicos, atención y última vez 
 visto dentro del mismo synchronized (lock). Esto elimina condiciones de carrera 
 sin locks distribuidos. 
+
 activeSectorId es volatile: escrito por el EDT (clicks), leído por el hilo del loop. 
 La vista nunca muta el estado: usa AnimatronicView (record inmutable) y 
 getters que devuelven copias. 
+
 BFS cacheado 
+
 MapGraph.shortestPath usa un HashMap<String, List<String>> con key from>to (o 
 from>to!avoid1,avoid2). El grafo es estático, así que el cache se llena en las primeras 
 iteraciones y se reutiliza toda la partida. 
+
 Última vez visto 
+
 No se calcula en la vista. El GameState.updateLastSeen() centraliza la lógica y la vista 
 solo lee. Esto evita tener dos definiciones distintas de "visible". 
+
 Input buffering 
+
 Cuando el jugador clickea durante el cooldown de cámara, si faltan ≤250 ms se 
 guarda la intención en bufferedSectorId. Se consume en el próximo tick cuando el 
 cooldown expira. Cambia la sensación de respuesta sin tocar la lógica del cooldown. 
+
 Bloqueo de puertas 
+
 Chica y Bonnie exponen getBlockedDoorNodeId(). GameState.tick recalcula cada frame 
 qué puertas están bloqueadas. DoorSystem.toggle ignora clicks si la puerta está 
 bloqueada. La vista solo pinta el estado. 
+
 Tema centralizado 
+
 Todos los colores y fuentes viven en Theme.java. Cambiar un color se reduce a editar 
 una constante. 
  
