@@ -15,8 +15,10 @@ public class Foxy extends Animatronic {
     private static final double TARGET_AT_1  = 36.0;
     private static final double TARGET_AT_20 = 20.0;
 
-    private static final double RUSH_NODE_TIME = 0.5;
-    private static final double RUSH_SKIP_TIME = 0.8;
+    private static final double RUSH_NODE_TIME_AT_1  = 0.8;
+    private static final double RUSH_NODE_TIME_AT_20 = 0.3;
+    private static final double RUSH_SKIP_TIME_AT_1  = 1.5;
+    private static final double RUSH_SKIP_TIME_AT_20 = 0.6;
 
     private static final String[] ENTRANCE_PATH = { "E1", "E2", "E3", "E4", "E5" };
     private static final String RIGHT_DOOR = "PD";
@@ -96,7 +98,7 @@ public class Foxy extends Animatronic {
         String next = path.get(1);
         boolean blockedNext = gameState.isNodeOccupiedByOther(next, getId());
 
-        double stepTime = blockedNext ? RUSH_SKIP_TIME : RUSH_NODE_TIME;
+        double stepTime = blockedNext ? aiRushSkipTime() : aiRushNodeTime();
         if (rushTimer < stepTime) return;
         rushTimer -= stepTime;
 
@@ -138,16 +140,18 @@ public class Foxy extends Animatronic {
     }
 
     private double aiUpRate() {
-        int lvl = getAiLevel();
-        if (lvl <= 0) return 0.0;
-        if (lvl >= 20) return UP_RATE_AT_20;
-        return UP_RATE_AT_1 + (lvl - 1) * (UP_RATE_AT_20 - UP_RATE_AT_1) / 19.0;
+        return aiLerp(UP_RATE_AT_1, UP_RATE_AT_20);
     }
 
     private double aiTimerTarget() {
-        int lvl = getAiLevel();
-        if (lvl <= 0) return TARGET_AT_1;
-        if (lvl >= 20) return TARGET_AT_20;
-        return TARGET_AT_1 + (lvl - 1) * (TARGET_AT_20 - TARGET_AT_1) / 19.0;
+        return aiLerp(TARGET_AT_1, TARGET_AT_20);
+    }
+
+    private double aiRushNodeTime() {
+        return aiLerp(RUSH_NODE_TIME_AT_1, RUSH_NODE_TIME_AT_20);
+    }
+
+    private double aiRushSkipTime() {
+        return aiLerp(RUSH_SKIP_TIME_AT_1, RUSH_SKIP_TIME_AT_20);
     }
 }

@@ -16,9 +16,14 @@ public class Bonnie extends Animatronic {
     private static final double DOOR_WAIT_MIN = 4.0;
     private static final double DOOR_WAIT_MAX = 7.0;
     private static final double DOOR_KILL_DELAY = 2.0;
+    private static final double DOOR_CLOSED_LEAVE_TIME = 3.0;
 
-    private static final double H16_DETOUR_CHANCE = 0.15;
-    private static final double H16_WAIT_TIME = 10.0;
+    private static final double H16_DETOUR_CHANCE_AT_1  = 0.10;
+    private static final double H16_DETOUR_CHANCE_AT_20 = 0.35;
+    private static final double H16_BLOCK_DURATION_AT_1  = 10.0;
+    private static final double H16_BLOCK_DURATION_AT_20 = 20.0;
+    private static final double H16_STAY_DURATION_AT_1  = 10.0;
+    private static final double H16_STAY_DURATION_AT_20 = 3.0;
 
     private static final String HALLWAY1_ENTRY = "H11";
     private static final String H16 = "H16";
@@ -38,6 +43,7 @@ public class Bonnie extends Animatronic {
 
     private State state = State.GOING_TO_HALLWAY1;
     private double stateTimer = 0.0;
+    private double blockTimer = 0.0;
 
     private double doorWaitTimer = 0.0;
     private double doorWaitThreshold = 0.0;
@@ -63,6 +69,15 @@ public class Bonnie extends Animatronic {
 
     @Override
     public void tick(double dt, GameState state) {
+        // El timer de bloqueo corre siempre, aunque Bonnie ya se haya ido.
+        if (blockTimer > 0) {
+            blockTimer -= dt;
+            if (blockTimer <= 0) {
+                blockTimer = 0;
+                for (String s : HALLWAY_SECTORS) state.setSectorTapped(s, false);
+            }
+        }
+
         switch (this.state) {
             case GOING_TO_HALLWAY1   -> tickGoingToHallway1(dt, state);
             case GOING_TO_H16        -> tickGoingToH16(dt, state);
@@ -78,8 +93,8 @@ public class Bonnie extends Animatronic {
 
     private void tickGoingToHallway1(double dt, GameState state) {
         if ("hallway1".equals(currentSector(state))) {
-            // Decisión: ¿desvío a H16 (15%) o va directo a la puerta?
-            if (state.getRandom().nextDouble() < H16_DETOUR_CHANCE) {
+            double chance = aiLerp(H16_DETOUR_CHANCE_AT_1, H16_DETOUR_CHANCE_AT_20);
+            if (state.getRandom().nextDouble() < chance) {
                 state.log(getDisplayName() + " se desvía hacia H16.");
                 this.state = State.GOING_TO_H16;
             } else {
@@ -94,8 +109,9 @@ public class Bonnie extends Animatronic {
         if (H16.equals(getCurrentNodeId())) {
             state.log(getDisplayName() + " se queda en H16.");
             this.state = State.WAITING_AT_H16;
-            this.stateTimer = H16_WAIT_TIME;
-            for (String s : HALLWAY_SECTORS) state.setCameraBlocked(s, true);
+            this.stateTimer = aiLerp(H16_STAY_DURATION_AT_1, H16_STAY_DURATION_AT_20);
+            this.blockTimer = aiLerp(H16_BLOCK_DURATION_AT_1, H16_BLOCK_DURATION_AT_20);
+            for (String s : HALLWAY_SECTORS) state.setSectorTapped(s, true);
             return;
         }
         advanceMove(dt, state, H16);
@@ -104,7 +120,7 @@ public class Bonnie extends Animatronic {
     private void tickWaitingAtH16(double dt, GameState state) {
         stateTimer -= dt;
         if (stateTimer <= 0) {
-            for (String s : HALLWAY_SECTORS) state.setCameraBlocked(s, false);
+            // No desbloqueamos acá: el blockTimer sigue su curso.
             state.log(getDisplayName() + " sale de H16.");
             this.state = State.GOING_TO_RIGHT_DOOR;
             this.timeSinceAttempt = moveInterval;
@@ -123,18 +139,25 @@ public class Bonnie extends Animatronic {
         advanceMove(dt, state, RIGHT_DOOR);
     }
 
-    private void tickAtRightDoor(double dt, GameState state) {
-        doorWaitTimer += dt;
-        if (doorWaitTimer < doorWaitThreshold) return;
+    private double closedTime = 0.0;
 
+    private void tickAtRightDoor(double dt, GameState state) {
         boolean doorOpen = !state.getDoors().isBlocked(RIGHT_DOOR);
+
         if (doorOpen) {
-            state.log(getDisplayName() + " bloquea la puerta derecha.");
-            this.state = State.BLOCKING_DOOR;
-            this.killTimer = 0;
+            closedTime = 0;
+            doorWaitTimer += dt;
+            if (doorWaitTimer >= doorWaitThreshold) {
+                state.log(getDisplayName() + " bloquea la puerta derecha.");
+                this.state = State.BLOCKING_DOOR;
+                this.killTimer = 0;
+            }
         } else {
-            state.log(getDisplayName() + " se retira de la puerta derecha.");
-            respawn(state);
+            closedTime += dt;
+            if (closedTime >= DOOR_CLOSED_LEAVE_TIME) {
+                state.log(getDisplayName() + " se retira de la puerta derecha.");
+                respawn(state);
+            }
         }
     }
 

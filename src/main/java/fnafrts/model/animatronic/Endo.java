@@ -58,8 +58,7 @@ public class Endo extends Animatronic {
     protected double aiProbability() {
         int lvl = getAiLevel();
         if (lvl <= 0) return 0.0;
-        double p = 0.72 + (lvl - 1) * 0.0137;
-        return Math.max(0.0, Math.min(1.0, p));
+        return aiLerp(0.72, 0.98);
     }
 
     @Override
@@ -163,9 +162,9 @@ public class Endo extends Animatronic {
         int idx = Math.min(2, path.size() - 1);
         String target = path.get(idx);
 
-        if (gameState.isNodeOccupiedByOther(target, getId())) {
+        if (!gameState.canEnter(getId(), target)) {
             target = path.get(1);
-            if (gameState.isNodeOccupiedByOther(target, getId())) {
+            if (!gameState.canEnter(getId(), target)) {
                 String prev = getPreviousNodeId();
                 if (prev != null && gameState.canEnter(getId(), prev)) {
                     gameState.moveAnimatronic(this, prev);
@@ -173,8 +172,7 @@ public class Endo extends Animatronic {
                 return;
             }
         }
-
-        if (!gameState.canEnter(getId(), target)) return;
+        
         gameState.moveAnimatronic(this, target);
 
         if (PI.equals(target)) {

@@ -14,6 +14,7 @@ import fnafrts.model.animatronic.Animatronic;
 import fnafrts.model.graph.MapGraph;
 import fnafrts.model.graph.Node;
 import fnafrts.model.graph.NodeType;
+import fnafrts.model.graph.Sector;
 import fnafrts.model.systems.AttentionSystem;
 import fnafrts.model.systems.DoorSystem;
 
@@ -23,6 +24,7 @@ public class GameState {
     private static final int FINAL_HOUR = 6;
     private static final int LOG_CAPACITY = 50;
     private static final long CAMERA_COOLDOWN_MS = 1500L;
+    public static final long CAMERA_RESET_LOCKOUT_MS = 3600L;
     private static final long INPUT_BUFFER_MS = 250L;
 
     private String bufferedSectorId = null;
@@ -37,7 +39,8 @@ public class GameState {
 
     private final Object lock = new Object();
     private final Random random;
-    private final Set<String> blockedCameraSectors = new HashSet<>();
+    private final Set<String> tappedSectors = new HashSet<>();
+    private long camerasLockoutUntilMs = 0;
 
     private volatile String activeSectorId;
 
@@ -69,10 +72,17 @@ public class GameState {
     public boolean trySetActiveSector(String id) {
         synchronized (lock) {
             if (id == null || id.equals(activeSectorId)) return false;
-            if (blockedCameraSectors.contains(id)) return false;
+            if (isCamerasInLockout()) {
+                long lockoutRemaining = camerasLockoutUntilMs - System.currentTimeMillis();
+                if (lockoutRemaining <= INPUT_BUFFER_MS) {
+                    bufferedSectorId = id;
+                    bufferedSectorExpiryMs = System.currentTimeMillis() + INPUT_BUFFER_MS;
+                }
+                return false;
+            }
+
             long now = System.currentTimeMillis();
             long remaining = CAMERA_COOLDOWN_MS - (now - lastSectorChangeMs);
-
             if (remaining > 0) {
                 if (remaining <= INPUT_BUFFER_MS) {
                     bufferedSectorId = id;
@@ -104,10 +114,14 @@ public class GameState {
         return activeSectorId == null;
     }
 
-    public void turnOffCameras() {
+    public void resetCameras() {
         synchronized (lock) {
+            if (activeSectorId == null) return;
             activeSectorId = null;
-            lastSectorChangeMs = System.currentTimeMillis();
+            long now = System.currentTimeMillis();
+            lastSectorChangeMs = now;
+            camerasLockoutUntilMs = now + CAMERA_RESET_LOCKOUT_MS;
+            tappedSectors.clear();
         }
     }
 
@@ -170,20 +184,28 @@ public class GameState {
         }
     }
 
-    public boolean isCameraBlocked(String sectorId) {
-        synchronized (lock) { return blockedCameraSectors.contains(sectorId); }
+    public boolean isSectorTapped(String sectorId) {
+        synchronized (lock) { return tappedSectors.contains(sectorId); }
     }
 
-    public void setCameraBlocked(String sectorId, boolean blocked) {
+    public void setSectorTapped(String sectorId, boolean tapped) {
         synchronized (lock) {
-            if (blocked) blockedCameraSectors.add(sectorId);
-            else         blockedCameraSectors.remove(sectorId);
-            // Si el jugador está mirando una cámara que se acaba de bloquear, lo expulsamos
-            if (blocked && sectorId.equals(activeSectorId)) {
-                activeSectorId = null;
-                lastSectorChangeMs = System.currentTimeMillis();
-            }
+            if (tapped) tappedSectors.add(sectorId);
+            else        tappedSectors.remove(sectorId);
         }
+    }
+
+    public boolean isCamerasInLockout() {
+        return System.currentTimeMillis() < camerasLockoutUntilMs;
+    }
+
+    public long getCamerasLockoutRemainingMs() {
+        long remaining = camerasLockoutUntilMs - System.currentTimeMillis();
+        return Math.max(0, remaining);
+    }
+
+    public long getCamerasLockoutUntilMs() {
+        return camerasLockoutUntilMs;
     }
 
     /** true si el nodo está ocupado por alguien que no sos vos. */
@@ -241,7 +263,8 @@ public class GameState {
     }
 
     public String getSectorDisplayName(String sectorId) {
-        return map.getSector(sectorId).getDisplayName();
+        Sector s = map.getSector(sectorId);
+        return s == null ? sectorId : s.getDisplayName();
     }
 
     public List<AnimatronicView> getAnimatronicViews() {
@@ -298,7 +321,15 @@ public class GameState {
         if (n.getType() == NodeType.ENTRY_LEFT) return doors.isLeftLightOn();
         if (n.getType() == NodeType.ENTRY_RIGHT) return doors.isRightLightOn();
         String active = activeSectorId;
-        return active != null && active.equals(n.getSectorId());
+        if (active == null) return false;
+        if (tappedSectors.contains(active)) return false;
+        return active.equals(n.getSectorId());
+    }
+
+    public Set<String> getTappedSectors() {
+        synchronized (lock) {
+            return new HashSet<>(tappedSectors);
+        }
     }
 
     // ---------- Registro ----------
@@ -331,7 +362,6 @@ public class GameState {
         synchronized (lock) {
             if (map.getNode(nodeId) == null) return false;
 
-            // Exclusividad de home/respawn (solo animatrónicos activos)
             for (Animatronic a : animatronics.values()) {
                 if (!a.isActive()) continue;
                 if (nodeId.equals(a.getHomeNodeId()) || nodeId.equals(a.getRespawnNodeId())) {
@@ -339,13 +369,8 @@ public class GameState {
                 }
             }
 
-            // Ocupación real
             Set<String> occ = nodeOccupancy.get(nodeId);
-            if (occ != null && !occ.isEmpty() && !occ.contains(animatronicId)) {
-                return false;
-            }
-
-            return true;
+            return occ == null || occ.contains(animatronicId);
         }
     }
 
@@ -429,11 +454,9 @@ public class GameState {
                 long now = System.currentTimeMillis();
                 if (now > bufferedSectorExpiryMs) {
                     bufferedSectorId = null;
-                } else {
+                } else if (!isCamerasInLockout()) {
                     long remaining = CAMERA_COOLDOWN_MS - (now - lastSectorChangeMs);
-                    if (remaining <= 0
-                            && !blockedCameraSectors.contains(bufferedSectorId)
-                            && !bufferedSectorId.equals(activeSectorId)) {
+                    if (remaining <= 0 && !bufferedSectorId.equals(activeSectorId)) {
                         applySectorChange(bufferedSectorId, now);
                     }
                 }

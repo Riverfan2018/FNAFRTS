@@ -11,15 +11,28 @@ public class Chica extends Animatronic {
 
     private static final double MOVE_BASE = 7.5;
     private static final double OBSERVED_MULT = 1.15;
-    private static final double PIZZA_SPEED_MULT = 0.8;
+    
+    // Pizza speed multiplier (menor = más rápido)
+    private static final double PIZZA_SPEED_AT_1  = 0.9;
+    private static final double PIZZA_SPEED_AT_20 = 0.5;
 
-    private static final double KITCHEN_MIN = 15.0;
-    private static final double KITCHEN_MAX = 25.0;
-    private static final double KITCHEN_ATTENTION_PER_SEC = 1.0;
+    // Tiempo en cocina
+    private static final double KITCHEN_MIN_AT_1  = 12.0;
+    private static final double KITCHEN_MAX_AT_1  = 18.0;
+    private static final double KITCHEN_MIN_AT_20 = 25.0;
+    private static final double KITCHEN_MAX_AT_20 = 40.0;
 
-    private static final double PIZZA_COOK_MIN = 13.0;
-    private static final double PIZZA_COOK_MAX = 22.0;
+    // Atención por segundo en cocina
+    private static final double KITCHEN_ATT_AT_1  = 0.6;
+    private static final double KITCHEN_ATT_AT_20 = 1.6;
 
+    // Tiempo de cocción de la pizza
+    private static final double PIZZA_COOK_MIN_AT_1  = 25.0;
+    private static final double PIZZA_COOK_MAX_AT_1  = 30.0;
+    private static final double PIZZA_COOK_MIN_AT_20 = 14.0;
+    private static final double PIZZA_COOK_MAX_AT_20 = 18.0;
+
+    // Timers en la puerta
     private static final double DOOR_OPEN_BLOCK_TIME = 4.0;
     private static final double DOOR_CLOSED_LEAVE_TIME = 3.0;
     private static final double DOOR_OPEN_GRACE_TIME = 1.0;
@@ -82,8 +95,10 @@ public class Chica extends Animatronic {
     public boolean acceptPizzaOrder(GameState gameState) {
         if (state != State.IN_KITCHEN) return false;
         state = State.COOKING_PIZZA;
-        stateTimer = PIZZA_COOK_MIN + gameState.getRandom().nextDouble()
-                * (PIZZA_COOK_MAX - PIZZA_COOK_MIN);
+        stateTimer = aiLerp(PIZZA_COOK_MIN_AT_1, PIZZA_COOK_MIN_AT_20)
+           + gameState.getRandom().nextDouble() *
+             (aiLerp(PIZZA_COOK_MAX_AT_1, PIZZA_COOK_MAX_AT_20)
+              - aiLerp(PIZZA_COOK_MIN_AT_1, PIZZA_COOK_MIN_AT_20));
         kitchenTarget = null;
         return true;
     }
@@ -105,8 +120,10 @@ public class Chica extends Animatronic {
         if (KITCHEN_SECTOR.equals(currentSector(state))) {
             state.log(getDisplayName() + " ha entrado a la cocina.");
             this.state = State.IN_KITCHEN;
-            this.stateTimer = KITCHEN_MIN + state.getRandom().nextDouble()
-                    * (KITCHEN_MAX - KITCHEN_MIN);
+            this.stateTimer = aiLerp(KITCHEN_MIN_AT_1, KITCHEN_MIN_AT_20)
+                + state.getRandom().nextDouble() *
+                  (aiLerp(KITCHEN_MAX_AT_1, KITCHEN_MAX_AT_20)
+                   - aiLerp(KITCHEN_MIN_AT_1, KITCHEN_MIN_AT_20));
             this.kitchenTarget = null;
             return;
         }
@@ -114,7 +131,7 @@ public class Chica extends Animatronic {
     }
 
     private void tickInKitchen(double dt, GameState state) {
-        state.getAttention().contribute(KITCHEN_ATTENTION_PER_SEC);
+        state.getAttention().contribute(aiLerp(KITCHEN_ATT_AT_1, KITCHEN_ATT_AT_20));
 
         stateTimer -= dt;
         if (stateTimer <= 0) {
@@ -198,7 +215,9 @@ public class Chica extends Animatronic {
     private void leaveKitchen(GameState state, boolean afterPizza) {
         state.log(getDisplayName() + " sale de la cocina.");
         this.state = State.GOING_TO_OFFICE;
-        this.speedMultiplier = afterPizza ? PIZZA_SPEED_MULT : 1.0;
+        this.speedMultiplier = afterPizza
+            ? aiLerp(PIZZA_SPEED_AT_1, PIZZA_SPEED_AT_20)
+            : 1.0;
         this.timeSinceAttempt = moveInterval;
     }
 

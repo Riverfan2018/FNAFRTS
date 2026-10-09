@@ -3,6 +3,7 @@ package fnafrts.view;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
@@ -161,6 +162,8 @@ public class MapPanel extends JPanel {
 
     // ---------- Render ----------
 
+    private boolean hasRenderedOnce = false;
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -168,10 +171,11 @@ public class MapPanel extends JPanel {
         // si vinieron del click directo o del input buffer.
         String currentActive = state.getActiveSectorId();
         if (!java.util.Objects.equals(currentActive, lastRenderedActiveSector)) {
-            if (lastRenderedActiveSector != null) {
+            if (hasRenderedOnce) {
                 staticStartMs = System.currentTimeMillis();
             }
             lastRenderedActiveSector = currentActive;
+            hasRenderedOnce = true;
         }
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
@@ -197,13 +201,14 @@ public class MapPanel extends JPanel {
             if (n.getType() != NodeType.OFFICE) continue;
             Rectangle r = nodeBounds.get(n.getId());
             if (r == null) continue;
-            paintOfficeNode(g2, n, r, pulse);
+            paintOfficeNode(g2, r, pulse);
         }
 
         paintAnimatronics(g2);
         paintLastSeen(g2);
         paintStatic(g2);
         paintCooldownRing(g2);
+        paintPersistentInterference(g2);
 
         g2.dispose();
     }
@@ -270,6 +275,13 @@ public class MapPanel extends JPanel {
             g2.setColor(borderColor);
             g2.setStroke(new BasicStroke(1.2f));
             g2.drawRoundRect(x, y, w, h, 18, 18);
+            if (state.isSectorTapped(s.getId())) {
+                g2.setColor(new Color(220, 60, 60, 40));
+                g2.fillRoundRect(x, y, w, h, 18, 18);
+                g2.setColor(new Color(220, 60, 60, 200));
+                g2.setStroke(new BasicStroke(2f));
+                g2.drawRoundRect(x, y, w, h, 18, 18);
+            }
         } else if (isHovered) {
             g2.setColor(Theme.BORDER_SECTOR_HOVER);
             g2.setStroke(new BasicStroke(2f));
@@ -417,7 +429,7 @@ public class MapPanel extends JPanel {
         g2.drawRoundRect(r.x, r.y, r.width, r.height, corner, corner);
     }
 
-    private void paintOfficeNode(Graphics2D g2, Node n, Rectangle r, float pulse) {
+    private void paintOfficeNode(Graphics2D g2, Rectangle r, float pulse) {
         int corner = Math.max(6, r.width / 8);
 
         int glowAlpha = (int) (70 + 70 * pulse);
@@ -449,7 +461,6 @@ public class MapPanel extends JPanel {
     }
 
     private void paintAnimatronics(Graphics2D g2) {
-        String active = state.getActiveSectorId();
         boolean reveal = state.isGameFinished();
 
         for (AnimatronicView a : state.getAnimatronicViews()) {
@@ -567,11 +578,18 @@ public class MapPanel extends JPanel {
     private void paintCooldownRing(Graphics2D g2) {
         long now = System.currentTimeMillis();
         long lastChange = state.getLastSectorChangeMs();
-        long cooldown = GameState.getCameraCooldownMs();
-        long elapsed = now - lastChange;
-        if (elapsed >= cooldown) return;
 
-        float remaining = 1.0f - elapsed / (float) cooldown;
+        // El anillo debe durar lo que dure el bloqueo más largo activo:
+        // cooldown normal (1.5s tras un cambio de cámara) o lockout de reset (3.6s).
+        long cooldownEnd = lastChange + GameState.getCameraCooldownMs();
+        long lockoutEnd  = state.getCamerasLockoutUntilMs();
+        long end = Math.max(cooldownEnd, lockoutEnd);
+
+        long elapsed = now - lastChange;
+        long totalDuration = end - lastChange;
+        if (totalDuration <= 0 || elapsed >= totalDuration) return;
+
+        float remaining = 1.0f - elapsed / (float) totalDuration;
         if (remaining <= 0f) return;
 
         int size = COOLDOWN_CIRCLE_PX;
@@ -586,7 +604,9 @@ public class MapPanel extends JPanel {
         g2.fillOval(cx - size / 2, cy - size / 2, size, size);
 
         int angle = (int) (360 * remaining);
-        g2.setColor(Theme.NODE_OFFICE_BORDER);
+        long now2 = System.currentTimeMillis();
+        boolean inLockout = now2 < state.getCamerasLockoutUntilMs();
+        g2.setColor(inLockout ? Theme.HEAT_CRIT : Theme.NODE_OFFICE_BORDER);
         g2.fillArc(cx - size / 2, cy - size / 2, size, size, 90, -angle);
 
         g2.setColor(Theme.BORDER_SECTOR_DIM);
@@ -640,5 +660,56 @@ public class MapPanel extends JPanel {
 
     private Point centerOf(Rectangle r) {
         return new Point(r.x + r.width / 2, r.y + r.height / 2);
+    }
+
+    private void paintPersistentInterference(Graphics2D g2) {
+        java.util.Set<String> tapped = state.getTappedSectors();
+        if (tapped.isEmpty()) return;
+
+        long t = System.currentTimeMillis();
+
+        for (String sectorId : tapped) {
+            Sector s = state.getMap().getSector(sectorId);
+            if (s == null) continue;
+            Rectangle b = getSectorBounds(s);
+            if (b == null) continue;
+
+            // 1) Fondo opaco (tapa todo lo dibujado debajo: nodos, animatrónicos, links)
+            g2.setColor(new Color(18, 18, 24));
+            g2.fillRoundRect(b.x, b.y, b.width, b.height, 18, 18);
+
+            // 2) Estática densa, con semilla por sector y ventana temporal.
+            //    Alpha 255 = opaco total.
+            Random r = new Random(t / 80 + sectorId.hashCode());
+            for (int y = b.y; y < b.y + b.height; y += STATIC_STEP_PX) {
+                for (int x = b.x; x < b.x + b.width; x += STATIC_STEP_PX) {
+                    int v = r.nextInt(256);
+                    g2.setColor(new Color(v, v, v, 255));
+                    g2.fillRect(x, y, STATIC_STEP_PX, STATIC_STEP_PX);
+                }
+            }
+
+            // 3) Scanline que baja por el sector
+            long scanT = t % 1500;
+            int scanY = b.y + (int) (scanT / 1500.0 * b.height);
+            g2.setColor(new Color(255, 255, 255, 90));
+            g2.fillRect(b.x, scanY, b.width, 3);
+
+            // 4) Texto centrado, con fuente adaptada al ancho del sector
+            int fontSize = Math.max(12, Math.min(22, b.width / 12));
+            g2.setFont(new Font("SansSerif", Font.BOLD, fontSize));
+            g2.setColor(new Color(255, 255, 255, 220));
+            FontMetrics fm = g2.getFontMetrics();
+            String text = "SEÑAL PERDIDA";
+            int tw = fm.stringWidth(text);
+            g2.drawString(text,
+                    b.x + (b.width - tw) / 2,
+                    b.y + b.height / 2 + fm.getAscent() / 3);
+
+            // 5) Borde rojo para delimitar el sector interferido
+            g2.setColor(new Color(220, 60, 60, 220));
+            g2.setStroke(new BasicStroke(2.5f));
+            g2.drawRoundRect(b.x, b.y, b.width, b.height, 18, 18);
+        }
     }
 }

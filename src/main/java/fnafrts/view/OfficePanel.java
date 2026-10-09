@@ -17,13 +17,13 @@ import fnafrts.core.GameState;
 
 public class OfficePanel extends JPanel {
 
-    private final GameState state;
+
     private final JButton pizzaButton;
     private final JButton shockButton;
     private final JButton camerasOffButton;
 
     public OfficePanel(GameState state) {
-        this.state = state;
+
         setPreferredSize(new Dimension(0, 170));
         setBackground(Theme.BG_PANEL);
         setLayout(new BorderLayout());
@@ -36,7 +36,7 @@ public class OfficePanel extends JPanel {
 
         pizzaButton     = makeActionButton("PIZZA (W)");
         shockButton     = makeActionButton("SHOCK (S)");
-        camerasOffButton = makeActionButton("CÁMARAS (C)");
+        camerasOffButton = makeActionButton("RESET (C)");
 
         pizzaButton.addActionListener(e -> {
             if (state.isGameFinished()) return;
@@ -48,7 +48,7 @@ public class OfficePanel extends JPanel {
         });
         camerasOffButton.addActionListener(e -> {
             if (state.isGameFinished()) return;
-            state.turnOffCameras();
+            state.resetCameras();
         });
 
         leftSide.add(wrapSlot(pizzaButton));
@@ -78,8 +78,9 @@ public class OfficePanel extends JPanel {
             shockButton.setEnabled(inEmployee && !finished && state.canShock());
 
             boolean hasActiveCamera = state.getActiveSectorId() != null;
-            camerasOffButton.setVisible(hasActiveCamera);
-            camerasOffButton.setEnabled(hasActiveCamera && !finished);
+            boolean inLockout = state.isCamerasInLockout();
+            camerasOffButton.setVisible(hasActiveCamera && !inLockout);
+            camerasOffButton.setEnabled(hasActiveCamera && !inLockout && !finished);
         });
         poll.start();
     }

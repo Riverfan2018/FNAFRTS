@@ -106,9 +106,9 @@ public class MainFrame extends JFrame {
             if (state.isGameFinished()) return;
             state.orderPizza();
         });
-        bind(im, am, KeyEvent.VK_C, "camerasOff", () -> {
+        bind(im, am, KeyEvent.VK_C, "resetCameras", () -> {
             if (state.isGameFinished()) return;
-            state.turnOffCameras();
+            state.resetCameras();
         });
         bind(im, am, KeyEvent.VK_S, "shock", () -> {
             if (state.isGameFinished()) return;

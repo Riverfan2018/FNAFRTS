@@ -15,8 +15,10 @@ public class Freddy extends Animatronic {
     private static final double AT_DOOR_SILENT_MIN = 1.0;
     private static final double AT_DOOR_SILENT_MAX = 5.0;
     private static final double AT_DOOR_KILL_THRESHOLD = 3.0;
+    private static final double DOOR_CLOSE_PENALTY = 0.8;
     private static final double AT_DOOR_ATTENTION_RATE = 0.25;
     private static final double BLINK_PERIOD = 0.5;
+    private static final double BLINK_PERIOD_MIN = 0.15;
 
     private static final String LEFT_DOOR  = "PI";
     private static final String RIGHT_DOOR = "PD";
@@ -34,10 +36,12 @@ public class Freddy extends Animatronic {
 
     private double doorTime = 0;
     private double doorOpenAccum = 0;
+    private double currentKillThreshold = AT_DOOR_KILL_THRESHOLD;
     private double silentDuration = 0;
     private boolean noisyPhase = true;
     private boolean blinkOn = true;
     private double blinkTimer = 0.0;
+    private boolean prevDoorOpen = false;
 
     private int nodesMoved = 0;
 
@@ -73,7 +77,9 @@ public class Freddy extends Animatronic {
             this.state = State.AT_DOOR;
             this.doorTime = 0;
             this.doorOpenAccum = 0;
+            this.currentKillThreshold = AT_DOOR_KILL_THRESHOLD;
             this.noisyPhase = true;
+            this.prevDoorOpen = !state.getDoors().isBlocked(targetDoor);
             this.silentDuration = AT_DOOR_SILENT_MIN
                     + rng.nextDouble() * (AT_DOOR_SILENT_MAX - AT_DOOR_SILENT_MIN);
             return;
@@ -120,28 +126,40 @@ public class Freddy extends Animatronic {
         doorTime += dt;
         boolean doorOpen = !state.getDoors().isBlocked(targetDoor);
 
+        // Anti-spam: cada transición de puerta abierta -> cerrada reduce el
+        // umbral de kill en 0.8s. Evita que el jugador stallee a Freddy
+        // abriendo y cerrando rápido.
+        if (prevDoorOpen && !doorOpen) {
+            currentKillThreshold = Math.max(0, currentKillThreshold - DOOR_CLOSE_PENALTY);
+        }
+        prevDoorOpen = doorOpen;
+
         // Parpadeo durante la fase de ruido
         if (noisyPhase) {
+            double ratio = currentKillThreshold > 0
+                    ? Math.min(1.0, doorOpenAccum / currentKillThreshold)
+                    : 1.0;
+            double currentBlinkPeriod = BLINK_PERIOD - (BLINK_PERIOD - BLINK_PERIOD_MIN) * ratio;
             blinkTimer += dt;
-            if (blinkTimer >= BLINK_PERIOD) {
+            if (blinkTimer >= currentBlinkPeriod) {
                 blinkTimer = 0;
                 blinkOn = !blinkOn;
             }
         } else {
-            blinkOn = true;   // en fase silenciosa queda fijo visible
+            blinkOn = true;
         }
 
         if (doorOpen) {
-        doorOpenAccum += dt;
-        if (doorOpenAccum >= AT_DOOR_KILL_THRESHOLD) {
-            String officeId = state.getMap().getOfficeNodeId();
-            if (officeId != null) state.moveAnimatronic(this, officeId);
-            state.triggerGameOver(getDisplayName() + " ha entrado por la puerta "
-                    + (targetDoor.equals(LEFT_DOOR) ? "izquierda" : "derecha"));
-            this.state = State.DONE;
-            return;
+            doorOpenAccum += dt;
+            if (doorOpenAccum >= currentKillThreshold) {
+                String officeId = state.getMap().getOfficeNodeId();
+                if (officeId != null) state.moveAnimatronic(this, officeId);
+                state.triggerGameOver(getDisplayName() + " ha entrado por la puerta "
+                        + (targetDoor.equals(LEFT_DOOR) ? "izquierda" : "derecha"));
+                this.state = State.DONE;
+                return;
+            }
         }
-    }
 
         if (noisyPhase) {
             state.getAttention().contribute(AT_DOOR_ATTENTION_RATE);
@@ -170,9 +188,11 @@ public class Freddy extends Animatronic {
         this.targetDoor = rng.nextBoolean() ? LEFT_DOOR : RIGHT_DOOR;
         this.doorTime = 0;
         this.doorOpenAccum = 0;
+        this.currentKillThreshold = AT_DOOR_KILL_THRESHOLD;
         this.noisyPhase = true;
         this.blinkOn = true;
         this.blinkTimer = 0.0;
+        this.prevDoorOpen = false;
         this.timeSinceAttempt = 0;
         this.nodesMoved = 0;
         this.moveInterval = rollInterval(MOVE_BASE);
